@@ -22,23 +22,22 @@ import java.util.stream.LongStream;
  */
 public class SparkTest implements Serializable{
 
-    private String tableName="spark-test";
-
     private String family="info";
 
     private byte[] qContent = Bytes.toBytes("content");
 
     public static void main(String[] args) {
+        String appName =args[0];
+        String tableName = args[1];
+        String resultPath = args[2];
         SparkTest sparkTest = new SparkTest();
-        String appName = "test";
-        String master = "spark://hadoop-hbase:7077";
-        SparkConf conf = new SparkConf().setAppName(appName).setMaster(master);
+        SparkConf conf = new SparkConf().setAppName(appName);
         JavaSparkContext sc = new JavaSparkContext(conf);
         Configuration config= HBaseConfiguration.create();
-        config.set("hbase.roodir","hdfs://hadoop-hbase:9000/hbase");
-        config.set("hbase.zookeeper.quorum","hadoop-hbase");
+        config.set("hbase.roodir","hdfs://spark-test-0:9000/hbase");
+        config.set("hbase.zookeeper.quorum","spark-test-0,spark-test-2,spark-test-4");
         config.set("hbase.zookeeper.property.clientPort", "2181");
-        config.set(TableInputFormat.INPUT_TABLE, sparkTest.tableName);
+        config.set(TableInputFormat.INPUT_TABLE, tableName);
         config.set(TableInputFormat.SCAN_COLUMN_FAMILY, sparkTest.family);
         JavaPairRDD<ImmutableBytesWritable, Result> hbaseRDD = sc.newAPIHadoopRDD(config, TableInputFormat.class,
                 ImmutableBytesWritable.class, Result.class);
@@ -51,7 +50,7 @@ public class SparkTest implements Serializable{
         f.map(s->{
             double[] x = LongStream.rangeClosed(1, s.length).asDoubleStream().toArray();
             return ExponentFitUtil.getOneExpFuncValue(SignalFit.fitOneExponent(x,s),x);
-        }).map(JSON::toJSONString).saveAsTextFile("/home/hadoop/result");
+        }).map(JSON::toJSONString).saveAsTextFile("/Result/"+resultPath );
     }
 
 }
