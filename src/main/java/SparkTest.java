@@ -5,7 +5,6 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableInputFormat;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.spark.Partitioner;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
@@ -48,7 +47,7 @@ public class SparkTest implements Serializable{
             String rowKey = new String(tuple2._2.getRow()).substring(3);
             byte[] content = tuple2._2.getValue(sparkTest.family.getBytes(), sparkTest.qContent);
             return new Tuple2<>(rowKey, content);
-        }).partitionBy(new MyPartitioner(numExe)).sortByKey();
+        }).sortByKey(true,numExe);
         List<double[]> result = files.map(tuple2 -> {
             TiffImage image = new TiffImage(tuple2._2,tuple2._1);
             return image.getAllRegionGrayAverage(50,50);
@@ -59,25 +58,4 @@ public class SparkTest implements Serializable{
             return ExponentFitUtil.getOneExpFuncValue(SignalFit.fitOneExponent(x,s),x);
         }).map(JSON::toJSONString).saveAsTextFile("/Result/"+resultPath );
     }
-
-    static class MyPartitioner extends Partitioner {
-
-        int num;
-
-        MyPartitioner(int num) {
-            this.num = num;
-        }
-
-        @Override
-        public int numPartitions() {
-            return this.num;
-        }
-
-        @Override
-        public int getPartition(Object o) {
-            String rowKey = (String) o;
-            return Math.abs(rowKey.hashCode()%this.num);
-        }
-    }
-
 }
