@@ -5,10 +5,12 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableInputFormat;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.spark.Partitioner;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
+import scala.Tuple2;
 
 import java.io.Serializable;
 import java.util.List;
@@ -30,20 +32,25 @@ public class SparkTest implements Serializable{
         String appName =args[0];
         String tableName = args[1];
         String resultPath = args[2];
+        int numExe = Integer.parseInt(args[3]);
         SparkTest sparkTest = new SparkTest();
         SparkConf conf = new SparkConf().setAppName(appName);
         JavaSparkContext sc = new JavaSparkContext(conf);
         Configuration config= HBaseConfiguration.create();
-        config.set("hbase.roodir","hdfs://spark-test-0:9000/hbase");
-        config.set("hbase.zookeeper.quorum","spark-test-0,spark-test-2,spark-test-4");
+        config.set("hbase.roodir","hdfs://hadoop-hbase:9000/hbase");
+        config.set("hbase.zookeeper.quorum","hadoop-hbase,hadoop-hbase-1,hadoop-hbase-2");
         config.set("hbase.zookeeper.property.clientPort", "2181");
         config.set(TableInputFormat.INPUT_TABLE, tableName);
         config.set(TableInputFormat.SCAN_COLUMN_FAMILY, sparkTest.family);
         JavaPairRDD<ImmutableBytesWritable, Result> hbaseRDD = sc.newAPIHadoopRDD(config, TableInputFormat.class,
                 ImmutableBytesWritable.class, Result.class);
-        List<double[]> result = hbaseRDD.map(tuple2 -> {
-            String rowKey = new String(tuple2._2.getRow());
-            TiffImage image = new TiffImage(tuple2._2.getValue(sparkTest.family.getBytes(), sparkTest.qContent), rowKey);
+        JavaPairRDD<String, byte[]> files = hbaseRDD.mapToPair(tuple2 -> {
+            String rowKey = new String(tuple2._2.getRow()).substring(3);
+            byte[] content = tuple2._2.getValue(sparkTest.family.getBytes(), sparkTest.qContent);
+            return new Tuple2<>(rowKey, content);
+        }).partitionBy(new MyPartitioner(numExe)).sortByKey();
+        List<double[]> result = files.map(tuple2 -> {
+            TiffImage image = new TiffImage(tuple2._2,tuple2._1);
             return image.getAllRegionGrayAverage(50,50);
         }).collect();
         JavaRDD<double[]> f = sc.parallelize(ImageUtil.getTranspose(result));
@@ -51,6 +58,26 @@ public class SparkTest implements Serializable{
             double[] x = LongStream.rangeClosed(1, s.length).asDoubleStream().toArray();
             return ExponentFitUtil.getOneExpFuncValue(SignalFit.fitOneExponent(x,s),x);
         }).map(JSON::toJSONString).saveAsTextFile("/Result/"+resultPath );
+    }
+
+    static class MyPartitioner extends Partitioner {
+
+        int num;
+
+        MyPartitioner(int num) {
+            this.num = num;
+        }
+
+        @Override
+        public int numPartitions() {
+            return this.num;
+        }
+
+        @Override
+        public int getPartition(Object o) {
+            String rowKey = (String) o;
+            return Math.abs(rowKey.hashCode()%this.num);
+        }
     }
 
 }
