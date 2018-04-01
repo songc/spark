@@ -1,4 +1,7 @@
+import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,6 +35,26 @@ public class ImageUtil {
             sum += i & 0xff;
         }
         return sum / data.length;
+    }
+
+    public static double[] getAllRegionGrayAverage(BufferedImage image, int regionWidth, int regionHeight){
+        int width = image.getWidth();
+        int height = image.getHeight();
+        int wNum = width / regionWidth;
+        int hNum = height / regionHeight;
+        double[] result = new double[wNum * hNum];
+        for (int i = 0; i < wNum; i++) {
+            for (int j = 0; j < hNum; j++) {
+                result[i * hNum + j] = ImageUtil.getRegionGrayAverage(image, regionHeight * i, regionHeight * j, regionWidth, regionHeight);
+            }
+        }
+        return result;
+    }
+
+    public static byte[] buffImageToBytes(BufferedImage bufferedImage, String format) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ImageIO.write(bufferedImage, format, out);
+        return out.toByteArray();
     }
 
     /**
