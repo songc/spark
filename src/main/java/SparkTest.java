@@ -31,10 +31,16 @@ public class SparkTest implements Serializable{
     private byte[] qContent = Bytes.toBytes("content");
 
     public static void main(String[] args) throws IOException {
+
+        if(args.length<4){
+            System.err.println("usrage: jar <appName> <table_name> <resultPath>");
+            System.exit(1);
+        }
+
         String appName =args[0];
         String tableName = args[1];
         String resultPath = args[2];
-        int numExe = Integer.parseInt(args[3]);
+        int numPar = Integer.parseInt(args[3]);
         SparkTest sparkTest = new SparkTest();
         SparkConf conf = new SparkConf().setAppName(appName);
         JavaSparkContext sc = new JavaSparkContext(conf);
@@ -43,7 +49,7 @@ public class SparkTest implements Serializable{
         config.set("hbase.zookeeper.quorum","hadoop-hbase,hadoop-hbase-1,hadoop-hbase-2");
         config.set("hbase.zookeeper.property.clientPort", "2181");
         Scan scan = new Scan();
-        scan.setCaching(10);
+        scan.setCaching(30);
         config.set(TableInputFormat.INPUT_TABLE, tableName);
         config.set(TableInputFormat.SCAN, TableMapReduceUtil.convertScanToString(scan));
         JavaPairRDD<ImmutableBytesWritable, Result> hbaseRDD = sc.newAPIHadoopRDD(config, TableInputFormat.class,
@@ -52,7 +58,7 @@ public class SparkTest implements Serializable{
             String rowKey = new String(tuple2._2.getRow()).substring(3);
             byte[] content = tuple2._2.getValue(sparkTest.family.getBytes(), sparkTest.qContent);
             return new Tuple2<>(rowKey, content);
-        }).sortByKey(true,numExe);
+        }).sortByKey(true, numPar*2);
         List<double[]> result = files.mapToPair(tuple2 -> {
             TiffImage image = new TiffImage(tuple2._2, tuple2._1);
             return new Tuple2<>(tuple2._1,image.getImage());
