@@ -17,7 +17,7 @@ public class OneExponentFit extends AbstractCurveFitter {
         final int len = collection.size();
         final double[] target = new double[len];
         final double[] weights = new double[len];
-        final double[] initialGUess = {1.0, 1.0};
+        final double[] initialGUess = {1.0, 1.0, 1.0};
         int i = 0;
         for (WeightedObservedPoint point : collection) {
             target[i] = point.getY();
@@ -36,19 +36,20 @@ public class OneExponentFit extends AbstractCurveFitter {
     }
 
     /**
-     * y = a*exp(b*x)
+     * y = a*exp(b*x)+c
      */
     class OneExponentFunc implements ParametricUnivariateFunction {
         @Override
         public double value(double v, double... params) {
-            return params[0] * Math.exp(params[1] * v);
+            return params[0] * Math.exp(params[1] * v)+ params[2];
         }
 
         @Override
         public double[] gradient(double v, double... params) {
             return new double[]{
                     Math.exp(params[1] * v),
-                    params[0] * v * Math.exp(params[1] * v)
+                    params[0] * v * Math.exp(params[1] * v),
+                    1
             };
         }
     }

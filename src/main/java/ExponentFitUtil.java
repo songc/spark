@@ -5,7 +5,7 @@
 public class ExponentFitUtil {
 
     /**
-     * y = a * exp(b * x)
+     * y = a * exp(b * x)+ c
      *
      * @param params 参数[a,b]
      * @param x      x的数组
@@ -15,7 +15,7 @@ public class ExponentFitUtil {
         int len = x.length;
         double[] y = new double[len];
         for (int i = 0; i < len; i++) {
-            y[i] = params[0] * Math.exp(params[1] * x[i]);
+            y[i] = params[0] * Math.exp(params[1] * x[i]) + params[2];
         }
         return y;
     }

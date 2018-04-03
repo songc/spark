@@ -18,8 +18,10 @@ public class SignalFit {
     public static double[] fitOneExponent(double[] x, double[] y) {
         List<WeightedObservedPoint> points = new ArrayList<>();
         for (int i = 0, k = x.length; i < k; i++) {
-            WeightedObservedPoint point = new WeightedObservedPoint(1.0, x[i], y[i]);
-            points.add(point);
+            if(i< k*0.1 || i> k*0.9) {
+                WeightedObservedPoint point = new WeightedObservedPoint(1.0, x[i], y[i]);
+                points.add(point);
+            }
         }
         return new OneExponentFit().fit(points);
     }

@@ -58,7 +58,7 @@ public class SparkTest implements Serializable{
             String rowKey = new String(tuple2._2.getRow()).substring(3);
             byte[] content = tuple2._2.getValue(sparkTest.family.getBytes(), sparkTest.qContent);
             return new Tuple2<>(rowKey, content);
-        }).sortByKey(true, numPar*2);
+        }).repartition(numPar*2);
         List<double[]> result = files.mapToPair(tuple2 -> {
             TiffImage image = new TiffImage(tuple2._2, tuple2._1);
             return new Tuple2<>(tuple2._1,image.getImage());
